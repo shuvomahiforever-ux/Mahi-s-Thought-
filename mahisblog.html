@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mahi's Thoughts</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
+    body {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 60px 20px;
+      color: #333;
+    }
+    .container {
+      width: 100%;
+      max-width: 750px;
+      background: #fff;
+      border-radius: 25px;
+      padding: 40px 30px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+    }
+    h1 {
+      text-align: center;
+      font-weight: 700;
+      font-size: 32px;
+      color: #333;
+      margin-bottom: 5px;
+    }
+    .subtitle {
+      text-align: center;
+      font-size: 16px;
+      color: #555;
+      margin-bottom: 30px;
+    }
+    textarea {
+      width: 100%;
+      min-height: 140px;
+      border-radius: 15px;
+      border: 1px solid #ccc;
+      padding: 15px;
+      font-size: 16px;
+      resize: none;
+      outline: none;
+      transition: border 0.3s, box-shadow 0.3s;
+    }
+    textarea:focus {
+      border: 1px solid #667eea;
+      box-shadow: 0 0 12px rgba(102,126,234,0.3);
+    }
+    button.post-btn {
+      width: 100%;
+      margin-top: 15px;
+      padding: 15px;
+      border-radius: 15px;
+      border: none;
+      background: #667eea;
+      color: white;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.2s;
+    }
+    button.post-btn:hover {
+      background: #5562c1;
+      transform: translateY(-2px);
+    }
+
+    /* Post cards */
+    .posts {
+      margin-top: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .post-card {
+      background: #fefefe;
+      border-radius: 20px;
+      padding: 25px 20px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.07);
+      transition: transform 0.2s, box-shadow 0.2s;
+      opacity: 0;
+      transform: translateY(10px);
+      animation: fadeIn 0.5s forwards;
+    }
+    .post-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 35px rgba(0,0,0,0.1);
+    }
+    .post-date {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 12px;
+    }
+    .post-text {
+      font-size: 16px;
+      color: #444;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      max-height: 80px;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+    .post-text.expanded {
+      max-height: 1000px;
+    }
+
+    /* Read More button with smooth gradient */
+    .read-more-btn {
+      margin-top: 10px;
+      padding: 6px 15px;
+      border-radius: 12px;
+      border: none;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      color: white;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+    .read-more-btn:hover {
+      background: linear-gradient(90deg, #5562c1, #5b3ea5);
+      transform: translateY(-2px);
+    }
+
+    @keyframes fadeIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media(max-width: 500px){
+      .container { padding: 30px 20px; }
+      h1 { font-size: 26px; }
+      button.post-btn { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Mahi's Thoughts</h1>
+  <div class="subtitle">Write down anything you want</div>
+
+  <textarea id="postInput" placeholder="Share your thoughts..."></textarea>
+  <button class="post-btn" onclick="sendPost()">Post</button>
+
+  <div class="posts" id="posts"></div>
+</div>
+
+<script>
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwMhT8XikFBgQhVoUmttL8jwlFqZO6zyzdB8LDepaVATJjbsFiGot6R2fhiUSK0KpRU/exec";
+  const textarea = document.getElementById('postInput');
+
+  // Auto-expand textarea
+  textarea.addEventListener('input', () => {
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+  });
+
+  // Send post to Google Sheets
+  async function sendPost() {
+    const text = textarea.value.trim();
+    if (!text) return;
+
+    try {
+      await fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({ text }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+      textarea.value = '';
+      textarea.style.height = '140px';
+      loadPosts();
+    } catch (error) {
+      alert('Error sending post. Please try again.');
+      console.error(error);
+    }
+  }
+
+  // Format date nicely
+  function formatDate(dateString){
+    const d = new Date(dateString);
+    return d.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+  }
+
+  // Load posts from Google Sheets
+  async function loadPosts() {
+    try {
+      const res = await fetch(SCRIPT_URL);
+      const data = await res.json();
+      const postsDiv = document.getElementById('posts');
+      postsDiv.innerHTML = '';
+
+      if(data.length === 0){
+        postsDiv.innerHTML = '<p style="text-align:center; color:#999;">No posts yet. Be the first to share!</p>';
+        return;
+      }
+
+      data.reverse().forEach((post, index) => {
+        const div = document.createElement('div');
+        div.className = 'post-card';
+        div.innerHTML = `
+          <div class="post-date">${formatDate(post.date)}</div>
+          <div class="post-text" id="postText${index}">${post.text.replace(/\n/g,'<br>')}</div>
+          <button class="read-more-btn" onclick="toggleReadMore(${index})">Read More</button>
+        `;
+        postsDiv.appendChild(div);
+      });
+    } catch (error) {
+      console.error('Error loading posts', error);
+    }
+  }
+
+  // Toggle Read More / Read Less
+  function toggleReadMore(index) {
+    const textDiv = document.getElementById(`postText${index}`);
+    const btn = textDiv.nextElementSibling;
+    textDiv.classList.toggle('expanded');
+    btn.textContent = textDiv.classList.contains('expanded') ? 'Read Less' : 'Read More';
+  }
+
+  loadPosts();
+</script>
+
+</body>
+</html>
